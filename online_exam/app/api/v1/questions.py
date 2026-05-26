@@ -15,19 +15,17 @@ def get_db():
     finally:
         db.close()
 
-@router.get("/selectAllQuestion",response_model=QuestionListResponse)
+@router.get("/selectAllQuestion")
 async def selectAllQuestion(
-    page: int = Query(1,ge=1,description="页码"),
-    page_size:int = Query(10,ge=1,le=10,description="每页数量"),
-    type: Optional[str] = Query(None,description="题型筛选"),
-    difficulty: Optional[int] = Query(None,ge=1,le=3,description="难度筛选"),
-    keyword: Optional[str] = Query(None,description="关键词搜索"),
+    page: int = Query(1, ge=1),
+    page_size: int = Query(10, ge=1, le=10),
+    type: Optional[str] = Query(None),
+    difficulty: Optional[int] = Query(None, ge=1, le=3),
+    keyword: Optional[str] = Query(None),
     db: Session = Depends(get_db)
 ):
-    """
-    获取题目列表（分页 + 筛选）
-    """
+    
     result = QuestionService.selectAllQuestion(
-        db,page=page,page_size=page_size,type=type,difficulty=difficulty,keyword=keyword
+        db, page=page, page_size=page_size,type=type,difficulty=difficulty,keyword=keyword
     )
     return result

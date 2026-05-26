@@ -7,8 +7,8 @@
         <!-- 搜索筛选栏 -->
         <div class="search-container">
             <div class="search-box">
-                <input type="text" v-model="searchKeyword" @input="handleSearch" placeholder="搜索题目内容" class="search-input">
-                <select v-model="searchType" @change="handleSearch" class="type-select">
+                <input type="text" v-model="searchKeyword" placeholder="搜索题目内容" class="search-input">
+                <select v-model="searchType" class="type-select">
                     <option value="">全部题型</option>
                     <option value="single">单选题</option>
                     <option value="multiple">多选题</option>
@@ -16,7 +16,14 @@
                     <option value="fill">填空题</option>
                     <option value="essay">简答题</option>
                 </select>
-                <button @click="resetSearch" class="reset-btn">重置</button>
+                <select v-model="searchDifficulty" class="difficulty-select">
+                    <option value="">全部难度</option>
+                    <option value="1">⭐ 简单</option>
+                    <option value="2">⭐⭐ 中等</option>
+                    <option value="3">⭐⭐⭐ 困难</option>
+                </select>
+                <button class="search-btn" @click="handleSearch">🔍 搜索</button>
+                <button class="reset-btn" @click="resetSearch">重置</button>
             </div>
         </div>
 
@@ -35,11 +42,11 @@
                     </tr>
                 </thead>
                 <tbody>
-                    <tr v-for="question in filteredQuestions" :key="question.question_id">
+                    <tr v-for="question in questionsArr" :key="question.question_id">
                         <td>{{ question.question_id }}</td>
-                        <td><span class="badge" :class="getTypeClass(question.type)">{{ getTypeName(question.type) }}</span></td>
+                        <td><span class="badge" :class="typeClassMap[question.type]">{{ typeNameMap[question.type] }}</span></td>
                         <td class="question-content">{{ question.content }}</td>
-                        <td><span class="difficulty" :class="getDifficultyClass(question.difficulty)">{{ getDifficultyStars(question.difficulty) }}</span></td>
+                        <td><span class="difficulty" :class="difficultyClassMap[question.difficulty]">{{ difficultyStarMap[question.difficulty] }}</span></td>
                         <td>{{ question.score }}</td>
                         <td>{{ question.created_at?.split('T')[0] || '' }}</td>
                         <td>
@@ -51,8 +58,11 @@
             </table>
         </div>
 
-        <div v-if="filteredQuestions.length === 0 && searchKeyword" class="no-result">
-            没有找到匹配的题目
+        <!-- 分页 -->
+        <div class="pagination" v-if="totalPages > 1">
+            <button class="page-btn" :disabled="currentPage === 1" @click="prevPage">上一页</button>
+            <span class="page-info">第 {{ currentPage }} 页 / 共 {{ totalPages }} 页</span>
+            <button class="page-btn" :disabled="currentPage === totalPages" @click="nextPage">下一页</button>
         </div>
     </div>
 </template>
@@ -61,43 +71,59 @@
 import { ref, onMounted } from 'vue'
 
 const questionsArr = ref([])
-const filteredQuestions = ref([])
 const searchKeyword = ref('')
 const searchType = ref('')
+const searchDifficulty = ref('')
+const currentPage = ref(1)
+const totalPages = ref(1)
+const pageSize = 10
 
-function getAuthToken() {
-    return localStorage.getItem('access_token')
+// 题型映射
+const typeNameMap = {
+    single: '单选题',
+    multiple: '多选题',
+    judge: '判断题',
+    fill: '填空题',
+    essay: '简答题'
 }
 
-function getTypeName(type) {
-    const types = { single: '单选题', multiple: '多选题', judge: '判断题', fill: '填空题', essay: '简答题' }
-    return types[type] || type
+const typeClassMap = {
+    single: 'single',
+    multiple: 'multiple',
+    judge: 'judge',
+    fill: 'fill',
+    essay: 'essay'
 }
 
-function getTypeClass(type) {
-    const classes = { single: 'single', multiple: 'multiple', judge: 'judge', fill: 'fill', essay: 'essay' }
-    return classes[type] || ''
+// 难度映射
+const difficultyStarMap = {
+    1: '⭐ 简单',
+    2: '⭐⭐ 中等',
+    3: '⭐⭐⭐ 困难'
 }
 
-function getDifficultyStars(difficulty) {
-    const stars = { 1: '⭐ 简单', 2: '⭐⭐ 中等', 3: '⭐⭐⭐ 困难' }
-    return stars[difficulty] || '⭐ 简单'
-}
-
-function getDifficultyClass(difficulty) {
-    const classes = { 1: 'easy', 2: 'medium', 3: 'hard' }
-    return classes[difficulty] || 'easy'
+const difficultyClassMap = {
+    1: 'easy',
+    2: 'medium',
+    3: 'hard'
 }
 
 async function loadQuestions() {
     try {
-        const params = new URLSearchParams()
-        params.append('page', 1)
-        params.append('page_size', 10)
+        let url = `/api/v1/questions/selectAllQuestion?page=${currentPage.value}&page_size=${pageSize}`
+        if (searchKeyword.value) {
+            url += `&keyword=${encodeURIComponent(searchKeyword.value)}`
+        }
+        if (searchType.value) {
+            url += `&type=${searchType.value}`
+        }
+        if (searchDifficulty.value) {
+            url += `&difficulty=${searchDifficulty.value}`
+        }
+        
+        console.log('请求URL:', url)
 
-        const response = await fetch(`/api/v1/questions/selectAllQuestion/?${params.toString()}`, {
-            headers: { 'Authorization': `Bearer ${getAuthToken()}` }
-        })
+        const response = await fetch(url)
 
         if (!response.ok) {
             console.error('获取题目失败:', response.status)
@@ -106,49 +132,53 @@ async function loadQuestions() {
 
         const data = await response.json()
         questionsArr.value = data.items || []
-        filteredQuestions.value = questionsArr.value
+        totalPages.value = data.total_pages || 1
     } catch (error) {
         console.error('加载题目失败:', error)
     }
 }
 
-function handleSearch() {
-    const keyword = searchKeyword.value.trim().toLowerCase()
-    const type = searchType.value
-
-    if (!keyword && !type) {
-        filteredQuestions.value = questionsArr.value
-        return
+function prevPage() {
+    if (currentPage.value > 1) {
+        currentPage.value--
+        loadQuestions()
     }
+}
 
-    filteredQuestions.value = questionsArr.value.filter(q => {
-        let keywordMatch = true
-        let typeMatch = true
+function nextPage() {
+    if (currentPage.value < totalPages.value) {
+        currentPage.value++
+        loadQuestions()
+    }
+}
 
-        if (keyword) {
-            keywordMatch = q.content?.toLowerCase().includes(keyword)
-        }
-        if (type) {
-            typeMatch = q.type === type
-        }
-        return keywordMatch && typeMatch
-    })
+function handleSearch() {
+    console.log('=== 搜索按钮被点击 ===')
+    console.log('searchType值:', searchType.value)
+    console.log('searchDifficulty值:', searchDifficulty.value)
+    console.log('searchKeyword值:', searchKeyword.value)
+    currentPage.value = 1
+    loadQuestions()
 }
 
 function resetSearch() {
+    console.log('=== 重置按钮被点击 ===')
     searchKeyword.value = ''
     searchType.value = ''
-    filteredQuestions.value = questionsArr.value
+    searchDifficulty.value = ''
+    currentPage.value = 1
+    loadQuestions()
 }
 
 onMounted(() => {
+    console.log('页面挂载完成')
     loadQuestions()
 })
 </script>
 
 <style scoped>
 .questions-container {
-    margin-left: 0vw;
+    margin-left: 12vw;
     padding: 20px 24px;
     min-height: 100vh;
     box-sizing: border-box;
@@ -173,17 +203,19 @@ onMounted(() => {
 
 .search-container {
     margin-bottom: 24px;
-    width: 500px;
+    width: 700px;
 }
 
 .search-box {
     display: flex;
     gap: 10px;
     align-items: center;
+    flex-wrap: wrap;
 }
 
 .search-input {
     flex: 2;
+    min-width: 200px;
     padding: 8px 12px;
     border: 1px solid #dcdfe6;
     border-radius: 6px;
@@ -191,13 +223,27 @@ onMounted(() => {
     outline: none;
 }
 
-.type-select {
+.type-select,
+.difficulty-select {
     padding: 8px 12px;
     border: 1px solid #dcdfe6;
     border-radius: 6px;
     font-size: 14px;
     background: white;
     cursor: pointer;
+}
+
+.search-btn {
+    padding: 8px 16px;
+    background-color: #409eff;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.search-btn:hover {
+    background-color: #66b1ff;
 }
 
 .reset-btn {
@@ -207,6 +253,10 @@ onMounted(() => {
     border: none;
     border-radius: 6px;
     cursor: pointer;
+}
+
+.reset-btn:hover {
+    background-color: #a6a9ad;
 }
 
 .table-container {
@@ -248,11 +298,30 @@ onMounted(() => {
     font-size: 12px;
 }
 
-.badge.single { background: #e3f2fd; color: #1976d2; }
-.badge.multiple { background: #f3e5f5; color: #7b1fa2; }
-.badge.judge { background: #fff3e0; color: #f57c00; }
-.badge.fill { background: #e8f5e9; color: #388e3c; }
-.badge.essay { background: #fce4ec; color: #c2185b; }
+.badge.single {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge.multiple {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.badge.judge {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.badge.fill {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.badge.essay {
+    background: #fce4ec;
+    color: #c2185b;
+}
 
 .difficulty {
     display: inline-block;
@@ -261,9 +330,20 @@ onMounted(() => {
     font-size: 12px;
 }
 
-.difficulty.easy { background: #e8f5e9; color: #388e3c; }
-.difficulty.medium { background: #fff3e0; color: #f57c00; }
-.difficulty.hard { background: #ffebee; color: #d32f2f; }
+.difficulty.easy {
+    background: #e8f5e9;
+    color: #388e3c;
+}
+
+.difficulty.medium {
+    background: #fff3e0;
+    color: #f57c00;
+}
+
+.difficulty.hard {
+    background: #ffebee;
+    color: #d32f2f;
+}
 
 .action-btn {
     padding: 6px 12px;
@@ -279,17 +359,48 @@ onMounted(() => {
     color: white;
 }
 
+.action-btn.edit:hover {
+    background: #66b1ff;
+}
+
 .action-btn.delete {
     background: #f56c6c;
     color: white;
 }
 
-.no-result {
-    text-align: center;
-    padding: 40px;
-    color: #909399;
+.action-btn.delete:hover {
+    background: #f78989;
+}
+
+.pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 24px;
+}
+
+.page-btn {
+    padding: 8px 16px;
+    border: 1px solid #ddd;
     background: white;
-    border-radius: 8px;
-    margin-top: 20px;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.page-btn:hover:not(:disabled) {
+    background: #409eff;
+    border-color: #409eff;
+    color: white;
+}
+
+.page-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.page-info {
+    font-size: 14px;
+    color: #666;
 }
 </style>

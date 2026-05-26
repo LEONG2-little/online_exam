@@ -10,6 +10,8 @@ class QuestionService:
         """获取题目列表（分页+筛选）"""
         query = db.query(Question)
 
+        print(f"[DEBUG] type={type}, difficulty={difficulty}, keyword={keyword}")
+
         #筛选条件
         if type:
             query = query.filter(Question.type == type)
@@ -37,6 +39,9 @@ class QuestionService:
         return {
             "page": page,
             "page_size": page_size,
+            "type":type,
+            "difficulty":difficulty,
+            "keyword":keyword,
             "total": total,
             "total_pages": total_pages,
             "items": items
