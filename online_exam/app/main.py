@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
 from .core.database import engine, Base
-from .api.v1 import auth, users, questions, exams
+from .api.v1 import auth, users, questions, exams,submission
 
 #检查数据库是否存在，不存在则创建数据库表
 Base.metadata.create_all(bind=engine)
@@ -24,6 +24,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
 app.include_router(users.router, prefix="/api/v1/users", tags=["用户"])
 app.include_router(questions.router, prefix="/api/v1/questions", tags=["题库"])
 app.include_router(exams.router, prefix="/api/v1/exams", tags=["考试"])
+app.include_router(submission.router, prefix="/api/v1/submission", tags=["成绩"])
 
 @app.get("/")
 def root():

@@ -4,6 +4,7 @@ import Questions from '../views/Questions.vue'
 import Exams from '../views/Exams.vue'
 import Scores from '../views/Scores.vue'
 
+
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
