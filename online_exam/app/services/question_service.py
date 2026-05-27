@@ -6,7 +6,7 @@ from ..schemas.question import QuestionCreate, QuestionUpdate
 class QuestionService:
 
     @staticmethod
-    def selectAllQuestion(db:Session,page:int=1,page_size:int=10,type:str=None,difficulty:int=None,keyword:str=None):
+    def selectAllQuestion(db:Session,page:int=1,page_size:int=8,type:str=None,difficulty:int=None,keyword:str=None):
         """获取题目列表（分页+筛选）"""
         query = db.query(Question)
 

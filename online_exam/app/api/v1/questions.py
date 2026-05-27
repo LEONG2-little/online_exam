@@ -18,7 +18,7 @@ def get_db():
 @router.get("/selectAllQuestion")
 async def selectAllQuestion(
     page: int = Query(1, ge=1),
-    page_size: int = Query(10, ge=1, le=10),
+    page_size: int = Query(8, ge=1, le=8),
     type: Optional[str] = Query(None),
     difficulty: Optional[int] = Query(None, ge=1, le=3),
     keyword: Optional[str] = Query(None),

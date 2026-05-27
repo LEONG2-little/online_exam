@@ -76,7 +76,7 @@ const searchType = ref('')
 const searchDifficulty = ref('')
 const currentPage = ref(1)
 const totalPages = ref(1)
-const pageSize = 10
+const pageSize = 8
 
 // 题型映射
 const typeNameMap = {
@@ -153,16 +153,11 @@ function nextPage() {
 }
 
 function handleSearch() {
-    console.log('=== 搜索按钮被点击 ===')
-    console.log('searchType值:', searchType.value)
-    console.log('searchDifficulty值:', searchDifficulty.value)
-    console.log('searchKeyword值:', searchKeyword.value)
     currentPage.value = 1
     loadQuestions()
 }
 
 function resetSearch() {
-    console.log('=== 重置按钮被点击 ===')
     searchKeyword.value = ''
     searchType.value = ''
     searchDifficulty.value = ''
@@ -178,7 +173,7 @@ onMounted(() => {
 
 <style scoped>
 .questions-container {
-    margin-left: 12vw;
+    margin-left: 0vw;
     padding: 20px 24px;
     min-height: 100vh;
     box-sizing: border-box;
@@ -268,24 +263,29 @@ onMounted(() => {
 
 .data-table {
     width: 100%;
+    table-layout: fixed;
     border-collapse: collapse;
 }
 
 .data-table th,
 .data-table td {
-    padding: 14px 16px;
+    padding: 14px 8px;
     text-align: left;
     border-bottom: 1px solid #eee;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
-.data-table th {
-    background: #f8f9fa;
-    font-weight: 600;
-    color: #333;
-}
+.data-table th:nth-child(1) { width: 10%; }
+.data-table th:nth-child(2) { width: 10%; }
+.data-table th:nth-child(3) { width: 30%; }
+.data-table th:nth-child(4) { width: 10%; }
+.data-table th:nth-child(5) { width: 10%; }
+.data-table th:nth-child(6) { width: 15%; }
+.data-table th:nth-child(7) { width: 15%; }
 
 .question-content {
-    max-width: 400px;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
